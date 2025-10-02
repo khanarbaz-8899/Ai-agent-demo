@@ -1,24 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
-import { agent } from "@/lib/agent";
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
 
-export async function POST(req: NextRequest) {
-  try {
-    const { message } = await req.json();
+const openai = new OpenAI();
 
-    if (!message) {
-      return NextResponse.json(
-        { error: "Message is required" },
-        { status: 400 }
-      );
-    }
+export async function POST(req: Request) {
+  const { messages } = await req.json(); // ✅ now receiving history
 
-    const reply = await agent(message);
-    return NextResponse.json({ reply });
-  } catch (error) {
-    console.error("Chat route error:", error);
-    return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
-    );
-  }
+  const response = await openai.chat.completions.create({
+    model: "gpt-3.5-turbo",
+    messages: messages.map((m: any) => ({
+      role: m.role === "user" ? "user" : "assistant",
+      content: m.text,
+    })),
+  });
+
+  return NextResponse.json({
+    reply: response.choices[0].message.content,
+  });
 }
